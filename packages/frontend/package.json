@@ -1,0 +1,15 @@
+{
+  "name": "@mementogram/frontend",
+  "version": "1.0.0",
+  "description": "Mementogram frontend client",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo \"Frontend dev script not configured yet\" && exit 0",
+    "build": "echo \"Frontend build script not configured yet\" && exit 0",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

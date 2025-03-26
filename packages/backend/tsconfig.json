@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"target": "ES2016",
+		"module": "CommonJS",
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"baseUrl": ".",
+		"paths": {
+			"@utils/*": ["src/utils/*"],
+			"@config/*": ["src/config/*"],
+			"@services/*": ["src/services/*"],
+			"@controllers/*": ["src/controllers/*"],
+			"@routes/*": ["src/routes/*"],
+			"@middleware/*": ["src/middleware/*"],
+			"@models/*": ["src/models/*"] // If you use model files outside Prisma schema
+		}
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
+}
