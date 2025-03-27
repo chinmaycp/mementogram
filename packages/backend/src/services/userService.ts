@@ -1,58 +1,19 @@
 import db from "../config/db";
-
-// --- Interfaces (Temporary - move to shared-types later) ---
-
-export interface UserRecord {
-  id: number;
-  email: string;
-  username: string;
-  password_hash: string;
-  role_id: number;
-  created_at: Date;
-  updated_at: Date;
-  full_name: string | null;
-  bio: string | null;
-  profile_pic_url: string | null;
-  email_verified_at: Date | null;
-}
-
-export interface UserCreateInput {
-  email: string;
-  username: string;
-  passwordHash: string;
-  fullName?: string;
-  // roleId is handled by default in DB schema for now
-}
-
-export interface UserUpdateInput {
-  fullName?: string | null;
-  bio?: string | null;
-  username?: string;
-  profilePicUrl?: string | null;
-}
-
-export interface UserProfileOutput {
-  id: number;
-  email: string;
-  username: string;
-  fullName: string | null;
-  bio: string | null;
-  profilePicUrl: string | null;
-  roleName: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// --- Basic Error Classes ---
-
-export class NotFoundError extends Error {}
-export class ForbiddenError extends Error {}
-export class ConflictError extends Error {
-  constructor(message = "Resource conflict") {
-    super(message);
-    this.name = "ConflictError";
-  }
-}
+import {
+  NotFoundError,
+  ConflictError,
+  BadRequestError,
+  UnauthorizedError,
+} from "../errors"; // Import all needed errors
+import {
+  UserRecord,
+  UserProfile,
+  UserProfileOutput,
+  PublicUserProfile,
+  PublicUserProfileOutput,
+  UserUpdateInput,
+  UserCreateInput as ServiceUserCreateInput,
+} from "../types/users";
 
 // --- Service Functions ---
 
@@ -82,7 +43,7 @@ export const findUserByEmailOrUsername = async (
  * @returns The newly created user's essential details (excluding password hash).
  */
 export const createUser = async (
-  userData: UserCreateInput,
+  userData: ServiceUserCreateInput,
 ): Promise<UserProfileOutput> => {
   // Knex returns an array of inserted records. Use [0] to get the first one.
   // Use 'returning' to get back specific columns after insert.
@@ -262,4 +223,43 @@ export const updateUser = async (
   // This ensures we return the full profile structure with role name and correct fields
   const updatedProfile = await findUserById(userId);
   return updatedProfile;
+};
+
+/**
+ * Finds a user by username and returns public profile data.
+ * Excludes sensitive information like email, password hash, roles.
+ * @param username - The username to search for.
+ * @returns The public user profile object.
+ * @throws NotFoundError if user not found.
+ */
+export const findUserProfileByUsername = async (
+  username: string,
+): Promise<PublicUserProfileOutput> => {
+  // Consider case-insensitivity if needed: .whereRaw('LOWER(username) = LOWER(?)', [username])
+  const user = await db<UserRecord>("users")
+    .select(
+      // Select only public fields
+      "id",
+      "username",
+      "full_name", // Use snake_case from DB
+      "bio",
+      "profile_pic_url", // Use snake_case from DB
+      "created_at",
+    )
+    .where({ username: username }) // Case-sensitive search by default
+    .first();
+
+  if (!user) {
+    throw new NotFoundError(`User with username '${username}' not found.`);
+  }
+
+  // Map to the output structure (handling potential snake_case to camelCase if desired)
+  return {
+    id: user.id,
+    username: user.username,
+    fullName: user.full_name,
+    bio: user.bio,
+    profilePicUrl: user.profile_pic_url,
+    createdAt: user.created_at,
+  };
 };

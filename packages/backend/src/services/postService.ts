@@ -1,40 +1,11 @@
 import db from "../config/db";
-
-// --- Interfaces (Temporary - move to shared-types later) ---
-
-export interface PostRecord {
-  id: number;
-  user_id: number;
-  content: string;
-  image_url: string | null;
-  created_at: Date;
-  updated_at: Date;
-}
-
-export interface PostCreateInput {
-  content: string;
-  imageUrl?: string;
-  userId: number; // ID of user creating post
-}
-
-export interface PostUpdateInput {
-  content?: string;
-  imageUrl?: string;
-}
-
-export class NotFoundError extends Error {
-  constructor(message = "Resource not found") {
-    super(message);
-    this.name = "NotFoundError";
-  }
-}
-
-export class ForbiddenError extends Error {
-  constructor(message = "Permission denied") {
-    super(message);
-    this.name = "ForbiddenError";
-  }
-}
+import { NotFoundError, ForbiddenError } from "../errors";
+import {
+  PostRecord,
+  PostOutput,
+  PostCreateInput,
+  PostUpdateInput,
+} from "../types/posts";
 
 // --- Service Functions ---
 

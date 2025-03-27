@@ -10,13 +10,15 @@
     "dev": "ts-node-dev --respawn --transpile-only --exit-child src/server.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "knex:migrate:make": "knex migrate:make -x ts --knexfile ./knexfile.ts",
-    "knex:migrate:latest": "knex migrate:latest --knexfile ./knexfile.ts",
-    "knex:migrate:rollback": "knex migrate:rollback --knexfile ./knexfile.ts",
-    "knex:seed:make": "knex seed:make -x ts --knexfile ./knexfile.ts",
-    "knex:seed:run": "knex seed:run --knexfile ./knexfile.ts"
+    "knex:migrate:make": "knex migrate:make -x ts --knexfile ./src/config/knexfile.ts",
+    "knex:migrate:latest": "knex migrate:latest --knexfile ./src/config/knexfile.ts",
+    "knex:migrate:rollback": "knex migrate:rollback --knexfile ./src/config/knexfile.ts",
+    "knex:seed:make": "knex seed:make -x ts --knexfile ./src/config/knexfile.ts",
+    "knex:seed:run": "knex seed:run --knexfile ./src/config/knexfile.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.775.0",
+    "@aws-sdk/s3-request-presigner": "^3.775.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

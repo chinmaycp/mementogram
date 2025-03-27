@@ -2,7 +2,7 @@ import type { Knex } from "knex";
 import dotenv from "dotenv";
 import path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "./.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // Define interface for environment-specific configs for type safety
 interface KnexConfig {

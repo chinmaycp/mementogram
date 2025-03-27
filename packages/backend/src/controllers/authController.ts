@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import * as userService from "../services/userService";
-import { UserRecord } from "../services/userService";
+import { UserRecord } from "../types/users";
 
 // --- Simple Input Validation ---
 // TODO: Replace with a more robust validation library like express-validator later

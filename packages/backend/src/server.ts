@@ -7,6 +7,8 @@ import { checkDbConnectionKnex } from "./config/db";
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/userRoutes";
 import postRoutes from "./routes/postRoutes";
+import uploadRoutes from "./routes/uploadRoutes";
+import feedRoutes from "./routes/feedRoutes";
 
 // --- Initialization ---
 
@@ -28,6 +30,8 @@ app.use(express.urlencoded({ extended: true })); // req/res body parser for URL 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/posts", postRoutes);
+app.use("/api/v1/uploads", uploadRoutes);
+app.use("/api/v1/feed", feedRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({ message: "Mementogram backend is running!" });

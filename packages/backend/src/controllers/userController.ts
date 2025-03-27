@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as userService from "../services/userService";
-import { NotFoundError, ConflictError } from "../services/userService";
+import { UserUpdateInput } from "../types/users";
+import { NotFoundError, ConflictError } from "../errors";
 import { UserJwtPayload } from "../types/express";
 
 // --- Get Current Logged-In User Profile (/me) ---
@@ -58,7 +59,7 @@ export const updateMe = async (
     const { fullName, bio, username, profilePicUrl } = req.body;
 
     // Basic Validation: Ensure at least something is being updated
-    const updateData: userService.UserUpdateInput = {};
+    const updateData: UserUpdateInput = {};
     if (fullName !== undefined) updateData.fullName = fullName;
     if (bio !== undefined) updateData.bio = bio;
     if (username !== undefined) updateData.username = username;
@@ -96,5 +97,36 @@ export const updateMe = async (
   }
 };
 
-// --- TODO: Get User Profile by Username/ID (Public) ---
-// export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => { ... };
+// --- Get User Profile by Username (Public) ---
+export const getUserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const username = req.params.username;
+
+    // Basic validation
+    if (!username) {
+      res.status(400).json({ message: "Username parameter is required." });
+      return;
+    }
+
+    // Call the service function to get public profile data
+    const userProfile = await userService.findUserProfileByUsername(username);
+
+    // Service throws NotFoundError if user doesn't exist
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: userProfile,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof NotFoundError) {
+      res.status(404).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: "Error retrieving user profile." });
+    }
+  }
+};

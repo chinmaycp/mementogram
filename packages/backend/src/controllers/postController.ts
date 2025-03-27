@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as postService from "../services/postService";
-import { NotFoundError, ForbiddenError } from "../services/postService";
+import { PostCreateInput, PostUpdateInput } from "src/types/posts";
+import { NotFoundError, ForbiddenError } from "../errors";
 import { UserJwtPayload } from "../types/express";
 
 // --- Create Post ---
@@ -26,7 +27,7 @@ export const handleCreatePost = async (
       return;
     }
 
-    const postData: postService.PostCreateInput = {
+    const postData: PostCreateInput = {
       content,
       imageUrl, // Optional, will be undefined if not provided
       userId: user.userId,
@@ -130,7 +131,7 @@ export const handleUpdatePost = async (
       return;
     }
 
-    const updateData: postService.PostUpdateInput = { content, imageUrl };
+    const updateData: PostUpdateInput = { content, imageUrl };
 
     const updatedPost = await postService.updatePost(
       postId,
