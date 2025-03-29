@@ -8,23 +8,24 @@ export interface PostRecord {
   updated_at: Date;
 }
 
-// Standard Post Output
+// --- Add/Ensure this export exists ---
+// Standard Post Output structure returned by services/controllers
 export interface PostOutput {
   id: number;
   content: string;
-  imageUrl: string | null;
+  imageUrl: string | null; // Use consistent naming (e.g., camelCase)
   createdAt: Date;
   updatedAt: Date;
-  likeCount: number;
-  isLikedByCurrentUser?: boolean; // true if liked by requester, undefined/false otherwise
-  // Add author info here if needed for single post view context?
-  // author?: PublicUserProfile;
+  // Add author info here later if needed for certain contexts,
+  // or use the FeedPostOutput type for feed-specific data
+  // author?: { username: string; profilePicUrl: string | null; };
 }
+// --- End of Added/Ensured Export ---
 
 // Input for creating a post (requires content and userId)
 export interface PostCreateInput {
   content: string;
-  imageUrl?: string;
+  imageUrl?: string; // Optional
   userId: number;
 }
 
@@ -34,8 +35,9 @@ export interface PostUpdateInput {
   imageUrl?: string | null; // Allow setting to null explicitly
 }
 
-// Represents a post including basic author information, suitable for feeds
-export interface FeedPostOutput {
+// Represents a post including basic author information for feeds
+// (Should match FeedPostOutput from backend)
+export interface FeedPost {
   id: number;
   content: string;
   imageUrl: string | null;
@@ -48,5 +50,5 @@ export interface FeedPostOutput {
     profilePicUrl: string | null;
   };
   likeCount: number;
-  isLikedByCurrentUser?: boolean; // true if liked by requester, undefined/false otherwise
+  isLikedByCurrentUser: boolean;
 }

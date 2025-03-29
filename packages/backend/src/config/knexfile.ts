@@ -14,11 +14,11 @@ const config: KnexConfig = {
     client: "pg", // Specify the database client
     connection: process.env.DATABASE_URL_DEV,
     migrations: {
-      directory: "./db/migrations", // Directory for migration files
+      directory: "../../db/migrations", // Directory for migration files
       extension: "ts", // Use TypeScript for migrations
     },
     seeds: {
-      directory: "./db/seeds", // Directory for seed files
+      directory: "../../db/seeds", // Directory for seed files
       extension: "ts",
     },
   },
@@ -32,7 +32,7 @@ const config: KnexConfig = {
       max: 10,
     },
     migrations: {
-      directory: "./db/migrations",
+      directory: "../../db/migrations",
       extension: "ts", // Use 'js' if compiling migrations before deploy
     },
   },

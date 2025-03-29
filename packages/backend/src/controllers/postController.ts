@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express";
+import { UserJwtPayload } from "../types/express";
 import * as postService from "../services/postService";
 import { PostCreateInput, PostUpdateInput } from "src/types/posts";
-import { NotFoundError, ForbiddenError } from "../errors";
-import { UserJwtPayload } from "../types/express";
+import { NotFoundError, ForbiddenError, ConflictError } from "../errors";
+import * as likeService from "../services/likeService";
 
 // --- Create Post ---
 export const handleCreatePost = async (
@@ -56,8 +57,14 @@ export const handleGetAllPosts = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    // TODO: Add pagination query params later (e.g., req.query.page, req.query.limit)
-    const posts = await postService.findAllPosts();
+    const currentUserId = req.user?.userId;
+    const limit = parseInt((req.query.limit as string) || "20", 10);
+    const offset = parseInt((req.query.offset as string) || "0", 10);
+
+    const posts = await postService.findAllPosts(
+      { limit, offset },
+      currentUserId,
+    );
 
     res.status(200).json({
       status: "success",
@@ -77,6 +84,7 @@ export const handleGetPostById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    const currentUserId = req.user?.userId;
     const postId = parseInt(req.params.postId, 10);
 
     // Basic Validation
@@ -85,7 +93,7 @@ export const handleGetPostById = async (
       return;
     }
 
-    const post = await postService.findPostById(postId);
+    const post = await postService.findPostById(postId, currentUserId);
 
     // Service throws NotFoundError if post doesn't exist
     res.status(200).json({
@@ -189,6 +197,81 @@ export const handleDeletePost = async (
       res.status(403).json({ message: error.message });
     } else {
       res.status(500).json({ message: "Error deleting post." });
+    }
+  }
+};
+
+// --- Like Post ---
+export const handleLikePost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const user = req.user as UserJwtPayload;
+    if (!user) {
+      res.status(401).json({ message: "Not authorized" });
+      return;
+    }
+
+    const postId = parseInt(req.params.postId, 10);
+    if (isNaN(postId)) {
+      res.status(400).json({ message: "Invalid post ID." });
+      return;
+    }
+
+    // Call the like service
+    await likeService.likePost(user.userId, postId);
+
+    res.status(200).json({
+      // 200 OK or 201 Created are fine
+      status: "success",
+      message: "Post liked successfully.",
+    });
+  } catch (error: any) {
+    console.error("Like Post Error:", error);
+    if (error instanceof NotFoundError) {
+      // Post not found
+      res.status(404).json({ message: error.message });
+    } else if (error instanceof ConflictError) {
+      // Already liked
+      res.status(409).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: "Error liking post." });
+    }
+  }
+};
+
+// --- Unlike Post ---
+export const handleUnlikePost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const user = req.user as UserJwtPayload;
+    if (!user) {
+      res.status(401).json({ message: "Not authorized" });
+      return;
+    }
+
+    const postId = parseInt(req.params.postId, 10);
+    if (isNaN(postId)) {
+      res.status(400).json({ message: "Invalid post ID." });
+      return;
+    }
+
+    // Call the unlike service
+    await likeService.unlikePost(user.userId, postId);
+
+    res.status(204).send(); // Send No Content response for successful deletion
+  } catch (error: any) {
+    console.error("Unlike Post Error:", error);
+    if (error instanceof NotFoundError) {
+      // Like didn't exist
+      res.status(404).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: "Error unliking post." });
     }
   }
 };

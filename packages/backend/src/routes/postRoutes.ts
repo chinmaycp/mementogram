@@ -7,6 +7,8 @@ import {
   handleGetPostById,
   handleUpdatePost,
   handleDeletePost,
+  handleLikePost,
+  handleUnlikePost,
 } from "../controllers/postController"; // Import controller functions
 import { protect } from "../middleware/authMiddleware"; // Import protect middleware
 
@@ -34,8 +36,12 @@ router.put("/:postId", protect, handleUpdatePost);
 // 'protect' middleware runs first. Ownership check is done inside the controller/service.
 router.delete("/:postId", protect, handleDeletePost);
 
-// --- TODO: Routes for likes, comments on posts ---
-// e.g., router.post('/:postId/like', protect, handleLikePost);
-// e.g., router.post('/:postId/comments', protect, handleCreateComment);
+// --- Like/Unlike Routes ---
+
+// POST /api/v1/posts/:postId/like - Like a post (Protected)
+router.post("/:postId(\\d+)/like", protect, handleLikePost);
+
+// DELETE /api/v1/posts/:postId/like - Unlike a post (Protected)
+router.delete("/:postId(\\d+)/like", protect, handleUnlikePost);
 
 export default router;
