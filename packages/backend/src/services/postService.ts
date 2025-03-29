@@ -7,10 +7,13 @@ import {
   PostUpdateInput,
 } from "../types/posts";
 import * as likeService from "./likeService";
+import * as commentService from "./commentService";
 import { PaginationParams } from "../types/common";
 
 const POSTS_TABLE = "posts";
 const LIKES_TABLE = "likes";
+const COMMENTS_TABLE = "comments";
+const USERS_TABLE = "users";
 
 // --- Service Functions ---
 
@@ -53,12 +56,13 @@ export const findPostById = async (
   }
 
   // Fetch like count and like status in parallel
-  const [likeCount, isLiked] = await Promise.all([
+  const [likeCount, isLiked, commentCount] = await Promise.all([
     likeService.getLikeCount(postId),
     likeService.checkIfUserLikedPost(currentUserId, postId),
+    commentService.getCommentCount(postId),
   ]);
 
-  return mapPostRecordToOutput(postRecord, likeCount, isLiked);
+  return mapPostRecordToOutput(postRecord, likeCount, commentCount, isLiked);
 };
 
 /**
@@ -113,11 +117,26 @@ export const findAllPosts = async (
     likedPostIdsSet = new Set(likedPostsResult);
   }
 
+  // 4. Fetch comment counts for these posts in one query
+  const commentCountsResult = await db(COMMENTS_TABLE)
+    .select("post_id")
+    .count("* as commentCount")
+    .whereIn("post_id", postIds)
+    .groupBy("post_id");
+  const commentCountsMap = new Map<number, number>();
+  commentCountsResult.forEach((row: any) => {
+    commentCountsMap.set(
+      row.post_id,
+      parseInt((row.commentCount as string) || "0", 10),
+    );
+  });
+
   // 4. Combine the data
   const postOutputs = postRecords.map((record) => {
     const likeCount = likeCountsMap.get(record.id) || 0;
     const isLiked = currentUserId ? likedPostIdsSet.has(record.id) : undefined;
-    return mapPostRecordToOutput(record, likeCount, isLiked);
+    const commentCount = commentCountsMap.get(record.id) || 0;
+    return mapPostRecordToOutput(record, likeCount, commentCount, isLiked);
   });
 
   return postOutputs;
@@ -232,6 +251,7 @@ export const deletePost = async (
 const mapPostRecordToOutput = (
   record: PostRecord,
   likeCount: number,
+  commentCount: number,
   isLiked?: boolean, // Optional based on whether a user context is provided
 ): PostOutput => {
   return {
@@ -241,6 +261,7 @@ const mapPostRecordToOutput = (
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     likeCount: likeCount,
+    commentCount: commentCount,
     isLikedByCurrentUser: isLiked,
   };
 };

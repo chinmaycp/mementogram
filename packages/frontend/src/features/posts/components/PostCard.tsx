@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; // For linking to user profiles later
 import { FeedPost } from "../../../types/posts"; // Import the type for the post prop
 import * as postService from "../../../services/postService";
+import { CommentList } from "../../comments/components/CommentList";
+import { AddCommentForm } from "../../comments/components/AddCommentForm";
+import { Comment } from "../../../types/comments";
 
 // Define the props expected by the PostCard component
 interface PostCardProps {
@@ -12,17 +15,25 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   // Basic date formatting (can be improved with a library like date-fns later)
   const formattedDate = new Date(post.createdAt).toLocaleString();
 
-  // --- State for Optimistic UI Updates ---
+  // --- Likes States ---
   const [isLiked, setIsLiked] = useState(post.isLikedByCurrentUser ?? false);
   const [currentLikeCount, setCurrentLikeCount] = useState(post.likeCount);
   const [isLiking, setIsLiking] = useState(false); // Prevent double clicks
   const [likeError, setLikeError] = useState<string | null>(null);
 
+  // --- Comments States ---
+  const [showComments, setShowComments] = useState<boolean>(false);
+  const [currentCommentCount, setCurrentCommentCount] = useState(
+    post.commentCount,
+  ); // Local state for optimistic count update
+  const [commentListKey, setCommentListKey] = useState<number>(0); // Key to trigger CommentList refresh
+
   // Sync state if the initial prop changes (e.g., feed refreshes)
   useEffect(() => {
     setIsLiked(post.isLikedByCurrentUser ?? false);
     setCurrentLikeCount(post.likeCount);
-  }, [post.isLikedByCurrentUser, post.likeCount]);
+    setCurrentCommentCount(post.commentCount);
+  }, [post.isLikedByCurrentUser, post.likeCount, post.commentCount]);
 
   // --- Like/Unlike Handler ---
   const handleLikeToggle = async () => {
@@ -59,6 +70,20 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     } finally {
       setIsLiking(false);
     }
+  };
+
+  const handleToggleComments = () => {
+    setShowComments((prev) => !prev);
+  };
+
+  const handleNewCommentAdded = (newComment: Comment) => {
+    // Optimistically increment comment count shown on card
+    setCurrentCommentCount((prev) => prev + 1);
+    // Increment key to trigger CommentList refetch
+    setCommentListKey((prev) => prev + 1);
+    // Optional: Could also optimistically add newComment to a local comments state here
+    // if CommentList accepted comments as props instead of fetching internally.
+    console.log("New comment added, triggering list refresh", newComment);
   };
 
   return (
@@ -131,27 +156,46 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <span>Like</span>
           </button>
           {/* Comment Button */}
-          <button className="text-gray-500 hover:text-blue-500 text-sm flex items-center space-x-1">
+          <button
+            onClick={handleToggleComments}
+            className="text-gray-500 hover:text-blue-500 text-sm flex items-center space-x-1"
+          >
             {/* Replace with Icon later */}
             <span>💬</span>
-            <span>Comment (TODO)</span>
+            <span>{showComments ? "Hide Comments" : "Comment"}</span>
           </button>
         </div>
 
-        {/* Like Count Display */}
-        {(currentLikeCount > 0 || likeError) && (
-          <div className="mt-2 text-sm">
-            {currentLikeCount > 0 && (
-              <span className="font-semibold text-gray-700">
-                {currentLikeCount} {currentLikeCount === 1 ? "like" : "likes"}
-              </span>
-            )}
-            {likeError && (
-              <span className="text-red-500 ml-2">{likeError}</span>
-            )}
-          </div>
-        )}
+        {/* Like Count & Comment Count Display */}
+        <div className="mt-2 text-sm text-gray-600 space-x-4">
+          {currentLikeCount > 0 && (
+            <span className="font-semibold text-gray-700">
+              {currentLikeCount} {currentLikeCount === 1 ? "like" : "likes"}
+            </span>
+          )}
+          {currentCommentCount > 0 && (
+            <button onClick={handleToggleComments} className="hover:underline">
+              {currentCommentCount}{" "}
+              {currentCommentCount === 1 ? "comment" : "comments"}
+            </button>
+          )}
+          {likeError && <span className="text-red-500 ml-2">{likeError}</span>}
+        </div>
       </div>
+      {showComments && (
+        <div className="px-4 pb-4 border-t border-gray-100 pt-3 bg-gray-50/50">
+          {/* --- Render actual comment components --- */}
+          <AddCommentForm
+            postId={post.id}
+            onCommentAdded={handleNewCommentAdded} // Pass callback
+          />
+          <CommentList
+            key={commentListKey} // Use key to force remount/refetch on change
+            postId={post.id}
+            // refreshKey={commentListKey} // Alternatively pass as prop and use in useEffect deps
+          />
+        </div>
+      )}
     </div>
   );
 };

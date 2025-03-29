@@ -10,6 +10,10 @@ import {
   handleLikePost,
   handleUnlikePost,
 } from "../controllers/postController"; // Import controller functions
+import {
+  handleAddComment,
+  handleGetComments,
+} from "../controllers/commentController";
 import { protect } from "../middleware/authMiddleware"; // Import protect middleware
 
 const router: Router = express.Router();
@@ -43,5 +47,19 @@ router.post("/:postId(\\d+)/like", protect, handleLikePost);
 
 // DELETE /api/v1/posts/:postId/like - Unlike a post (Protected)
 router.delete("/:postId(\\d+)/like", protect, handleUnlikePost);
+
+// --- Comment Routes ---
+
+// GET /api/v1/posts/:postId/comments - Get comments for a post (Public)
+router.get("/:postId(\\d+)/comments", handleGetComments);
+
+// POST /api/v1/posts/:postId/comments - Add a comment to a post (Protected)
+router.post("/:postId(\\d+)/comments", protect, handleAddComment);
+
+// TODO: Add routes for updating/deleting comments later
+// e.g., router.put('/:postId(\\d+)/comments/:commentId(\\d+)', protect, handleUpdateComment);
+// e.g., router.delete('/:postId(\\d+)/comments/:commentId(\\d+)', protect, handleDeleteComment);
+
+// TODO: Make sure to not get fetch comments for a non-existent post
 
 export default router;

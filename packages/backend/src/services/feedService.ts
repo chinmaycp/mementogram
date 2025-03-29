@@ -3,10 +3,12 @@ import * as followService from "./followService"; // To get the following list
 import { FeedPostOutput } from "../types/posts"; // Import the feed post type
 import { PaginationParams } from "../types/common"; // Reuse pagination type for consistency
 import * as likeService from "./likeService";
+import * as commentService from "./commentService";
 
 const POSTS_TABLE = "posts";
 const USERS_TABLE = "users";
 const LIKES_TABLE = "likes";
+const COMMENTS_TABLE = "comments";
 
 export const getFeedForUser = async (
   userId: number, // The user requesting the feed
@@ -67,6 +69,20 @@ export const getFeedForUser = async (
     .pluck("post_id");
   const likedPostIdsSet = new Set(likedPostsResult);
 
+  // 5. Fetch comment counts for these posts in one query
+  const commentCountsResult = await db(COMMENTS_TABLE)
+    .select("post_id")
+    .count("* as commentCount")
+    .whereIn("post_id", postIds)
+    .groupBy("post_id");
+  const commentCountsMap = new Map<number, number>();
+  commentCountsResult.forEach((row: any) => {
+    commentCountsMap.set(
+      row.post_id,
+      parseInt((row.commentCount as string) || "0", 10),
+    );
+  });
+
   // 5. Combine data into FeedPostOutput structure
   const formattedFeed: FeedPostOutput[] = feedPostRecords.map((record) => ({
     id: record.id,
@@ -80,8 +96,9 @@ export const getFeedForUser = async (
       fullName: record.authorFullName,
       profilePicUrl: record.authorProfilePicUrl,
     },
-    likeCount: likeCountsMap.get(record.id) || 0, // Get count from map
-    isLikedByCurrentUser: likedPostIdsSet.has(record.id), // Check if user liked this post
+    likeCount: likeCountsMap.get(record.id) || 0,
+    isLikedByCurrentUser: likedPostIdsSet.has(record.id),
+    commentCount: commentCountsMap.get(record.id) || 0,
   }));
 
   return formattedFeed;

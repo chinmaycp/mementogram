@@ -51,4 +51,5 @@ export interface FeedPost {
   };
   likeCount: number;
   isLikedByCurrentUser: boolean;
+  commentCount: number;
 }

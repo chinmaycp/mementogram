@@ -27,7 +27,7 @@ prisma/migrations/*/*.db
 Thumbs.db
 
 # IDE directories
-.vscode/
+.vscode/*
 .idea/
 
 # Test reports

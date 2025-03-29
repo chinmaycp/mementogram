@@ -17,6 +17,7 @@ export interface PostOutput {
   updatedAt: Date;
   likeCount: number;
   isLikedByCurrentUser?: boolean; // true if liked by requester, undefined/false otherwise
+  commentCount: number;
   // Add author info here if needed for single post view context?
   // author?: PublicUserProfile;
 }
@@ -49,4 +50,5 @@ export interface FeedPostOutput {
   };
   likeCount: number;
   isLikedByCurrentUser?: boolean; // true if liked by requester, undefined/false otherwise
+  commentCount: number;
 }
