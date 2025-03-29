@@ -48,7 +48,9 @@ export const generateUploadUrl = async (
   const sanitizedFilename = filename
     .replace(/[^a-zA-Z0-9.\-_]/g, "_")
     .substring(0, 50);
-  const uniqueKey = `posts/<span class="math-inline">\{userId\}/</span>{randomUUID()}-<span class="math-inline">\{sanitizedFilename\}\.</span>{fileExtension}`;
+
+  const uniqueKey = `posts/${userId}/${randomUUID()}-${sanitizedFilename}\.${fileExtension}`;
+  const objectUrl = `https://${bucketName}\.s3\.${region}.amazonaws.com/${uniqueKey}`;
 
   // --- Create PutObjectCommand ---
   const command = new PutObjectCommand({
@@ -64,9 +66,6 @@ export const generateUploadUrl = async (
     const presignedUrl = await getSignedUrl(s3Client, command, {
       expiresIn: expiresInSeconds,
     });
-
-    // Construct the final object URL (assuming standard S3 URL format)
-    const objectUrl = `https://<span class="math-inline">\{bucketName\}\.s3\.</span>{region}.amazonaws.com/${uniqueKey}`;
 
     return {
       presignedUrl,
