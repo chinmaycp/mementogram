@@ -16,6 +16,14 @@ interface CreatePostResponse {
   };
 }
 
+// Define expected response for getting a single post
+interface GetPostResponse {
+  status: string;
+  data: {
+    post: PostOutput;
+  };
+}
+
 /**
  * Creates a new post by calling the backend API.
  * Requires authentication (token handled by apiClient).
@@ -29,6 +37,20 @@ export const createPost = async (
   const response = await apiClient.post<CreatePostResponse>(
     "/api/v1/posts",
     postData,
+  );
+  return response.data.data.post;
+};
+
+/**
+ * Fetches a single post by its ID from the backend API.
+ * Includes authentication token via interceptor for like status.
+ * @param postId - The ID of the post to fetch.
+ * @returns Promise resolving with the PostOutput object.
+ * @throws AxiosError on failure (e.g., post not found - 404).
+ */
+export const getPostById = async (postId: number): Promise<PostOutput> => {
+  const response = await apiClient.get<GetPostResponse>(
+    `/api/v1/posts/${postId}`,
   );
   return response.data.data.post;
 };

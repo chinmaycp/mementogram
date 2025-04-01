@@ -1,12 +1,13 @@
 import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 import FeedPage from "./pages/FeedPage";
 import CreatePostPage from "./pages/CreatePostPage";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import PostDetailPage from "./pages/PostDetailPage";
 
 function App() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
@@ -105,6 +106,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/posts/:postId" element={<PostDetailPage />} />
           {/* TODO: Add public profile route /users/:username later */}
           {/* <Route path="/users/:username" element={<PublicProfilePage />} /> */}
           <Route
