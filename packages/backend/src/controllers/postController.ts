@@ -1,9 +1,15 @@
 import { Request, Response, NextFunction } from "express";
 import { UserJwtPayload } from "../types/express";
 import * as postService from "../services/postService";
-import { PostCreateInput, PostUpdateInput } from "src/types/posts";
-import { NotFoundError, ForbiddenError, ConflictError } from "../errors";
 import * as likeService from "../services/likeService";
+import { PostCreateInput, PostUpdateInput } from "src/types/posts";
+import {
+  NotFoundError,
+  ForbiddenError,
+  ConflictError,
+  UnauthorizedError,
+  BadRequestError,
+} from "../errors";
 
 // --- Create Post ---
 export const handleCreatePost = async (
@@ -221,29 +227,32 @@ export const handleLikePost = async (
     }
 
     // Call the like service
-    await likeService.likePost(user.userId, postId);
+    const newVoteStatus = await likeService.likePost(user.userId, postId);
 
     res.status(200).json({
-      // 200 OK or 201 Created are fine
       status: "success",
-      message: "Post liked successfully.",
+      message:
+        newVoteStatus === 1 ? "Post liked successfully." : "Post like removed.",
+      voteStatus: newVoteStatus,
     });
   } catch (error: any) {
     console.error("Like Post Error:", error);
-    if (error instanceof NotFoundError) {
-      // Post not found
+    // Map known errors to status codes
+    if (error instanceof NotFoundError)
       res.status(404).json({ message: error.message });
-    } else if (error instanceof ConflictError) {
-      // Already liked
+    else if (error instanceof BadRequestError)
+      res.status(400).json({ message: error.message });
+    // ConflictError is less likely now with toggle logic, but keep just in case
+    else if (error instanceof ConflictError)
       res.status(409).json({ message: error.message });
-    } else {
-      res.status(500).json({ message: "Error liking post." });
-    }
+    else if (error instanceof UnauthorizedError)
+      res.status(401).json({ message: error.message });
+    else res.status(500).json({ message: "Error liking post." });
   }
 };
 
-// --- Unlike Post ---
-export const handleUnlikePost = async (
+// Handles Disliking OR removing a Dislike if already disliked
+export const handleDislikePost = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -251,27 +260,33 @@ export const handleUnlikePost = async (
   try {
     const user = req.user as UserJwtPayload;
     if (!user) {
-      res.status(401).json({ message: "Not authorized" });
-      return;
+      throw new UnauthorizedError();
     }
 
     const postId = parseInt(req.params.postId, 10);
     if (isNaN(postId)) {
-      res.status(400).json({ message: "Invalid post ID." });
-      return;
+      throw new BadRequestError("Invalid post ID.");
     }
 
-    // Call the unlike service
-    await likeService.unlikePost(user.userId, postId);
+    // Call the new dislike service function
+    const newVoteStatus = await likeService.dislikePost(user.userId, postId);
 
-    res.status(204).send(); // Send No Content response for successful deletion
+    res.status(200).json({
+      status: "success",
+      message:
+        newVoteStatus === -1
+          ? "Post disliked successfully."
+          : "Post dislike removed.",
+      voteStatus: newVoteStatus, // Return new status (-1 or 0)
+    });
   } catch (error: any) {
-    console.error("Unlike Post Error:", error);
-    if (error instanceof NotFoundError) {
-      // Like didn't exist
+    console.error("Dislike Post Error:", error);
+    if (error instanceof NotFoundError)
       res.status(404).json({ message: error.message });
-    } else {
-      res.status(500).json({ message: "Error unliking post." });
-    }
+    else if (error instanceof BadRequestError)
+      res.status(400).json({ message: error.message });
+    else if (error instanceof UnauthorizedError)
+      res.status(401).json({ message: error.message });
+    else res.status(500).json({ message: "Error disliking post." });
   }
 };

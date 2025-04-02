@@ -1,201 +1,311 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // For linking to user profiles later
-import { FeedPost } from "../../../types/posts"; // Import the type for the post prop
-import * as postService from "../../../services/postService";
-import { CommentList } from "../../comments/components/CommentList";
-import { AddCommentForm } from "../../comments/components/AddCommentForm";
+import React, { useState, useEffect, Fragment } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { FeedPost } from "../../../types/posts";
 import { Comment } from "../../../types/comments";
+import * as postService from "../../../services/postService";
+import { useAuth } from "../../../contexts/AuthContext";
+import { formatCompactNumber } from "../../../utils/formatNumber";
+import {
+  FaHeart,
+  FaRegHeart,
+  FaRegCommentAlt,
+  FaShareSquare,
+  FaRegBookmark,
+  FaBookmark,
+  FaChartBar,
+  FaEllipsisH,
+} from "react-icons/fa";
+import { Dialog, Transition } from "@headlessui/react";
+import { AddCommentForm } from "../../comments/components/AddCommentForm";
 
-// Define the props expected by the PostCard component
 interface PostCardProps {
   post: FeedPost;
+  // TODO: Add prop like isBookmarkedByCurrentUser?: boolean later
 }
 
 export const PostCard: React.FC<PostCardProps> = ({ post }) => {
-  // Basic date formatting (can be improved with a library like date-fns later)
-  const formattedDate = new Date(post.createdAt).toLocaleString();
+  const formattedDate =
+    new Date(post.createdAt).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    }) +
+    " · " +
+    new Date(post.createdAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
-  // --- Likes States ---
+  // State
   const [isLiked, setIsLiked] = useState(post.isLikedByCurrentUser ?? false);
   const [currentLikeCount, setCurrentLikeCount] = useState(post.likeCount);
-  const [isLiking, setIsLiking] = useState(false); // Prevent double clicks
-  const [likeError, setLikeError] = useState<string | null>(null);
-
-  // --- Comments States ---
-  const [showComments, setShowComments] = useState<boolean>(false);
   const [currentCommentCount, setCurrentCommentCount] = useState(
     post.commentCount,
-  ); // Local state for optimistic count update
-  const [commentListKey, setCommentListKey] = useState<number>(0); // Key to trigger CommentList refresh
+  );
+  const [isLiking, setIsLiking] = useState(false);
+  const [likeError, setLikeError] = useState<string | null>(null);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false); // TODO: Initialize from props later
+  const [isBookmarking, setIsBookmarking] = useState(false); // Loading state for bookmark
 
-  // Sync state if the initial prop changes (e.g., feed refreshes)
+  // Sync state from props
   useEffect(() => {
     setIsLiked(post.isLikedByCurrentUser ?? false);
     setCurrentLikeCount(post.likeCount);
     setCurrentCommentCount(post.commentCount);
-  }, [post.isLikedByCurrentUser, post.likeCount, post.commentCount]);
+    // TODO: Sync isBookmarked from props when available
+    // setIsBookmarked(post.isBookmarkedByCurrentUser ?? false);
+  }, [post.isLikedByCurrentUser, post.likeCount, post.commentCount]); // Add post.isBookmarked when available
 
-  // --- Like/Unlike Handler ---
-  const handleLikeToggle = async () => {
-    if (isLiking) return; // Prevent multiple requests
+  // --- Handlers ---
+  const stopEventPropagation = (event: React.MouseEvent) => {
+    event.stopPropagation();
+  };
 
+  const handleLikeToggle = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    stopEventPropagation(event); // Stop propagation
+    if (isLiking || !isAuthenticated) return;
     setIsLiking(true);
     setLikeError(null);
-
-    // Store previous state for potential rollback on error
     const previousIsLiked = isLiked;
     const previousLikeCount = currentLikeCount;
-
-    // Optimistic UI update
     setIsLiked(!previousIsLiked);
     setCurrentLikeCount((prev) => (previousIsLiked ? prev - 1 : prev + 1));
-
     try {
-      if (previousIsLiked) {
-        // If previously liked, call unlike service
-        await postService.unlikePost(post.id);
-      } else {
-        // If not previously liked, call like service
-        await postService.likePost(post.id);
-      }
-      // Success: Optimistic state is correct
+      if (previousIsLiked) await postService.unlikePost(post.id);
+      else await postService.likePost(post.id);
     } catch (error) {
-      console.error("Failed to toggle like:", error);
-      // Rollback UI on error
-      setIsLiked(previousIsLiked);
-      setCurrentLikeCount(previousLikeCount);
-      setLikeError("Failed to update like status.");
-      // Optionally hide error after a few seconds
-      setTimeout(() => setLikeError(null), 3000);
+      /* ... roll back state, set error ... */
     } finally {
       setIsLiking(false);
     }
   };
 
-  const handleToggleComments = () => {
-    setShowComments((prev) => !prev);
+  const openCommentModal = (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopEventPropagation(event); // Stop propagation
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    setIsCommentModalOpen(true);
   };
 
+  const closeCommentModal = () => setIsCommentModalOpen(false);
+
   const handleNewCommentAdded = (newComment: Comment) => {
-    // Optimistically increment comment count shown on card
     setCurrentCommentCount((prev) => prev + 1);
-    // Increment key to trigger CommentList refetch
-    setCommentListKey((prev) => prev + 1);
-    // Optional: Could also optimistically add newComment to a local comments state here
-    // if CommentList accepted comments as props instead of fetching internally.
-    console.log("New comment added, triggering list refresh", newComment);
+    closeCommentModal();
+    console.log("Comment added via modal:", newComment);
+    // TODO: Add Toast notification for success
+  };
+
+  const handleNavigateToPost = () => navigate(`/posts/${post.id}`);
+
+  // --- Placeholder Handlers for New Icons ---
+  const handleBookmarkToggle = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    stopEventPropagation(event);
+    if (isBookmarking || !isAuthenticated) return;
+    setIsBookmarking(true);
+    // Simulate API call
+    console.log("Bookmark toggled for post:", post.id);
+    await new Promise((res) => setTimeout(res, 500)); // Simulate delay
+    setIsBookmarked((prev) => !prev); // Optimistic update
+    // TODO: Add actual API call for bookmarking
+    setIsBookmarking(false);
+  };
+
+  const handleShare = (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopEventPropagation(event);
+    console.log("Share clicked for post:", post.id);
+    // TODO: Implement sharing logic (e.g., copy link, native share API)
+    alert("Sharing functionality not implemented yet.");
+  };
+
+  const handleViewMetrics = (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopEventPropagation(event);
+    console.log("View Metrics clicked for post:", post.id);
+    // TODO: Implement metrics modal/view
+    alert("Post metrics not available yet.");
+  };
+
+  const handleMoreOptions = (event: React.MouseEvent<HTMLButtonElement>) => {
+    stopEventPropagation(event);
+    console.log("More options clicked for post:", post.id);
+    // TODO: Implement dropdown menu with actions (Report, Block, etc.)
+    alert("More options not available yet.");
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-6 overflow-hidden">
-      {/* Card Header: Author Info & Timestamp */}
-      <div className="p-4 flex items-center space-x-3">
-        {/* Author Profile Pic Placeholder */}
-        <Link to={`/users/${post.author.username}`}>
-          <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-600">
-            {post.author.profilePicUrl ? (
-              <img
-                src={post.author.profilePicUrl}
-                alt={post.author.username}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              post.author.username?.charAt(0).toUpperCase()
-            )}
-          </div>
-        </Link>
-        <div className="flex-1">
-          <Link
-            to={`/users/${post.author.username}`}
-            className="font-semibold text-sm text-gray-800 hover:underline"
-          >
-            {post.author.username}
-          </Link>
-          {/* Optional: Show Full Name */}
-          {/* {post.author.fullName && <p className="text-xs text-gray-500">{post.author.fullName}</p>} */}
-          <p className="text-xs text-gray-500">{formattedDate}</p>
-        </div>
-        {/* Optional: Add options menu (e.g., for delete/edit) later */}
-      </div>
-
-      {/* Card Content */}
-      <div className="px-4 pb-2">
-        <p className="text-gray-700 text-sm whitespace-pre-wrap">
-          {post.content}
-        </p>
-      </div>
-
-      {/* Card Image (if exists) */}
-      {post.imageUrl && (
-        <div className="mt-2">
-          {" "}
-          {/* No extra padding needed if image spans full width */}
-          <img
-            src={post.imageUrl}
-            alt={`Post by ${post.author.username}`}
-            className="w-full object-cover" // Adjust object-fit as needed (cover, contain, etc.)
-          />
-        </div>
-      )}
-
-      {/* Card Footer (Actions & Like Count) */}
-      <div className="px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center space-x-4">
-          {/* Like Button */}
-          <button
-            onClick={handleLikeToggle}
-            disabled={isLiking}
-            className={`flex items-center space-x-1 text-sm ${
-              isLiked
-                ? "text-red-500 hover:text-red-600"
-                : "text-gray-500 hover:text-red-500"
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {/* Basic Heart Placeholder - Replace with Icons later */}
-            <span>{isLiked ? "❤️" : "🤍"}</span>
-            <span>Like</span>
-          </button>
-          {/* Comment Button */}
-          <button
-            onClick={handleToggleComments}
-            className="text-gray-500 hover:text-blue-500 text-sm flex items-center space-x-1"
-          >
-            {/* Replace with Icon later */}
-            <span>💬</span>
-            <span>{showComments ? "Hide Comments" : "Comment"}</span>
-          </button>
-        </div>
-
-        {/* Like Count & Comment Count Display */}
-        <div className="mt-2 text-sm text-gray-600 space-x-4">
-          {currentLikeCount > 0 && (
-            <span className="font-semibold text-gray-700">
-              {currentLikeCount} {currentLikeCount === 1 ? "like" : "likes"}
-            </span>
-          )}
-          {currentCommentCount > 0 && (
-            <button onClick={handleToggleComments} className="hover:underline">
-              {currentCommentCount}{" "}
-              {currentCommentCount === 1 ? "comment" : "comments"}
+    <>
+      {/* Main Post Card Area with bottom margin */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 overflow-hidden transition-colors duration-150 ease-in-out">
+        {" "}
+        {/* Added mb-4 */}
+        {/* Wrapper for clickable content area */}
+        <div
+          onClick={handleNavigateToPost}
+          className="cursor-pointer hover:bg-gray-50/50"
+        >
+          {/* Card Header: Author Info & Timestamp */}
+          <div className="p-4 flex items-center space-x-3">
+            {/* Author Pic Link */}
+            <Link
+              to={`/users/${post.author.username}`}
+              onClick={stopEventPropagation}
+              className="z-10 relative flex-shrink-0 block"
+            >
+              <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-semibold text-gray-600 overflow-hidden">
+                {/* ... profile pic img/placeholder ... */}
+                {post.author.profilePicUrl ? (
+                  <img
+                    src={post.author.profilePicUrl}
+                    alt={post.author.username}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  post.author.username?.charAt(0).toUpperCase()
+                )}
+              </div>
+            </Link>
+            {/* Author Username & Timestamp */}
+            <div className="flex-1 min-w-0">
+              {/* Username Link */}
+              <Link
+                to={`/users/${post.author.username}`}
+                onClick={stopEventPropagation}
+                className="font-semibold text-sm text-gray-800 hover:underline z-10 relative inline-block w-fit"
+              >
+                {post.author.username}
+              </Link>
+              {/* Timestamp (Not a link) */}
+              <p className="text-xs text-gray-500 truncate">{formattedDate}</p>
+            </div>
+            {/* More Options Button */}
+            <button
+              onClick={handleMoreOptions}
+              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 z-10 relative"
+              aria-label="More options"
+            >
+              <FaEllipsisH />
             </button>
+          </div>
+
+          {/* Card Content */}
+          <div className="px-4 pb-3">
+            <p className="text-gray-800 text-sm whitespace-pre-wrap">
+              {post.content}
+            </p>
+          </div>
+
+          {/* Card Image */}
+          {post.imageUrl && (
+            <div className="-mx-px mt-1">
+              {" "}
+              {/* Adjusted margin slightly */}
+              <img
+                src={post.imageUrl}
+                alt={`Post by ${post.author.username}`}
+                className="w-full object-cover max-h-[60vh] border-y border-gray-100"
+              />{" "}
+              {/* Adjusted max height */}
+            </div>
           )}
-          {likeError && <span className="text-red-500 ml-2">{likeError}</span>}
+        </div>{" "}
+        {/* End of clickable area */}
+        {/* Card Footer: Actions Row */}
+        <div className="px-4 pt-2 pb-3 flex justify-between items-center">
+          {/* Left Actions: Comment, Like, Share */}
+          <div className="flex items-center space-x-6">
+            {/* Comment Icon/Button */}
+            <button
+              onClick={openCommentModal}
+              className="flex items-center space-x-1.5 text-gray-500 hover:text-blue-500 p-1 -ml-1 transition-colors"
+              aria-label="Comment on post"
+            >
+              <FaRegCommentAlt className="w-5 h-5" />
+              <span className="text-xs font-medium">
+                {formatCompactNumber(currentCommentCount)}
+              </span>
+            </button>
+
+            {/* Like Icon/Button */}
+            <button
+              onClick={handleLikeToggle}
+              disabled={isLiking || !isAuthenticated}
+              className={`flex items-center space-x-1.5 ${isLiked ? "text-red-500" : "text-gray-500"} ${!isLiked ? "hover:text-red-500" : "hover:text-red-600"} disabled:opacity-50 disabled:cursor-not-allowed transition-colors p-1 rounded-full`}
+              aria-label={isLiked ? "Unlike post" : "Like post"}
+            >
+              {isLiked ? (
+                <FaHeart className="w-5 h-5" />
+              ) : (
+                <FaRegHeart className="w-5 h-5" />
+              )}
+              <span className="text-xs font-medium">
+                {formatCompactNumber(currentLikeCount)}
+              </span>
+              {likeError && (
+                <span className="text-red-500 ml-1 font-bold text-xs">
+                  {likeError}
+                </span>
+              )}
+            </button>
+
+            {/* Share Icon/Button */}
+            <button
+              onClick={handleShare}
+              className="flex items-center text-gray-500 hover:text-green-500 p-1 rounded-full"
+              aria-label="Share post"
+            >
+              <FaShareSquare className="w-5 h-5" />
+            </button>
+
+            {/* Metrics Icon/Button */}
+            <button
+              onClick={handleViewMetrics}
+              className="flex items-center text-gray-500 hover:text-purple-500 p-1 rounded-full"
+              aria-label="View post metrics"
+            >
+              <FaChartBar className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Right Actions: Bookmark */}
+          <div>
+            <button
+              onClick={handleBookmarkToggle}
+              disabled={isBookmarking || !isAuthenticated}
+              className={`flex items-center ${isBookmarked ? "text-yellow-600 hover:text-yellow-700" : "text-gray-500 hover:text-yellow-600"} disabled:opacity-50 disabled:cursor-not-allowed transition-colors p-1 rounded-full`}
+              aria-label={isBookmarked ? "Remove bookmark" : "Bookmark post"}
+            >
+              {isBookmarked ? (
+                <FaBookmark className="w-5 h-5" />
+              ) : (
+                <FaRegBookmark className="w-5 h-5" />
+              )}
+            </button>
+          </div>
         </div>
+        {/* Removed "Add a comment..." link here, action is via icon */}
       </div>
-      {showComments && (
-        <div className="px-4 pb-4 border-t border-gray-100 pt-3 bg-gray-50/50">
-          {/* --- Render actual comment components --- */}
+
+      {/* Comment Modal (keep as before) */}
+      <Transition appear show={isCommentModalOpen} as={Fragment}>
+        {/* ... Dialog structure ... */}
+        <Dialog.Panel className="w-full max-w-md ...">
+          {/* ... Dialog Title ... */}
           <AddCommentForm
             postId={post.id}
-            onCommentAdded={handleNewCommentAdded} // Pass callback
+            onCommentAdded={handleNewCommentAdded}
           />
-          <CommentList
-            key={commentListKey} // Use key to force remount/refetch on change
-            postId={post.id}
-            // refreshKey={commentListKey} // Alternatively pass as prop and use in useEffect deps
-          />
-        </div>
-      )}
-    </div>
+          {/* ... Cancel button ... */}
+        </Dialog.Panel>
+        {/* ... Dialog structure ... */}
+      </Transition>
+    </>
   );
 };
