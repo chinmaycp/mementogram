@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import * as userService from "../services/userService"; // Import the frontend user service
 import { UserProfile } from "../services/userService"; // Import the type
-// Or import { UserProfile } from '../types/users'; // If defined centrally
+import { UserPostList } from "../features/posts/components/UserPostList";
+import { useAuth } from "../contexts/AuthContext";
 
 const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -90,6 +91,11 @@ const ProfilePage: React.FC = () => {
           {/* TODO: Add Follower/Following counts */}
           {/* TODO: Add Edit Profile Button */}
         </div>
+      </div>
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Your Posts</h2>
+        {profile && <UserPostList userId={profile.id} />}
+        {/* Pass logged-in user's ID */}
       </div>
     </div>
   );

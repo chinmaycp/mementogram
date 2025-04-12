@@ -1,5 +1,8 @@
-// mementogram/packages/frontend/src/services/userService.ts
-import apiClient from "./apiClient"; // Import the configured axios instance
+import apiClient from "./apiClient";
+import { PublicUserProfile } from "../types/users";
+import { PostOutput } from "../types/posts";
+import { PaginationParams } from "../types/common";
+import { FeedPost } from "../types/posts";
 
 // Define the expected shape of the user profile data from GET /me
 // TODO: Move to shared types package later
@@ -35,5 +38,58 @@ export const getMe = async (): Promise<UserProfile> => {
   return response.data.data.user; // Extract the user object from the response structure
 };
 
-// --- TODO: Add other user service functions later ---
-// e.g., updateUserProfile, getPublicUserProfile(username)
+// Define structure for the get user posts API response
+interface GetUserPostsResponse {
+  status: string;
+  count: number;
+  data: {
+    posts: FeedPost[];
+  };
+}
+
+/**
+ * Fetches posts created by a specific user from the backend API.
+ * Includes authentication token via interceptor for like status on posts.
+ * @param userId - The ID of the user whose posts to fetch.
+ * @param pagination - Optional limit and offset for pagination.
+ * @returns Promise resolving with an array of PostOutput objects.
+ * @throws AxiosError on failure.
+ */
+export const getUserPosts = async (
+  userId: number,
+  pagination?: PaginationParams,
+): Promise<FeedPost[]> => {
+  const params = {
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+  };
+  // Use the backend endpoint we created: /users/:userId/posts
+  const response = await apiClient.get<GetUserPostsResponse>(
+    `/api/v1/users/${userId}/posts`,
+    { params },
+  );
+  return response.data.data.posts;
+};
+
+// Define expected response structure for public profile endpoint
+interface GetPublicProfileResponse {
+  status: string;
+  data: {
+    user: PublicUserProfile; // Backend returns the public profile structure
+  };
+}
+
+/**
+ * Fetches the public profile of a user by their username.
+ * @param username - The username of the profile to fetch.
+ * @returns Promise resolving with the PublicUserProfile.
+ * @throws AxiosError on failure (e.g., user not found - 404).
+ */
+export const getPublicUserProfile = async (
+  username: string,
+): Promise<PublicUserProfile> => {
+  const response = await apiClient.get<GetPublicProfileResponse>(
+    `/api/v1/users/${username}`,
+  );
+  return response.data.data.user; // Extract the user object
+};

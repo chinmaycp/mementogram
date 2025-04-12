@@ -215,16 +215,10 @@ export const handleLikePost = async (
 ): Promise<void> => {
   try {
     const user = req.user as UserJwtPayload;
-    if (!user) {
-      res.status(401).json({ message: "Not authorized" });
-      return;
-    }
+    if (!user) throw new UnauthorizedError();
 
     const postId = parseInt(req.params.postId, 10);
-    if (isNaN(postId)) {
-      res.status(400).json({ message: "Invalid post ID." });
-      return;
-    }
+    if (isNaN(postId)) throw new BadRequestError("Invalid post ID.");
 
     // Call the like service
     const newVoteStatus = await likeService.likePost(user.userId, postId);
@@ -259,14 +253,10 @@ export const handleDislikePost = async (
 ): Promise<void> => {
   try {
     const user = req.user as UserJwtPayload;
-    if (!user) {
-      throw new UnauthorizedError();
-    }
+    if (!user) throw new UnauthorizedError();
 
     const postId = parseInt(req.params.postId, 10);
-    if (isNaN(postId)) {
-      throw new BadRequestError("Invalid post ID.");
-    }
+    if (isNaN(postId)) throw new BadRequestError("Invalid post ID.");
 
     // Call the new dislike service function
     const newVoteStatus = await likeService.dislikePost(user.userId, postId);

@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import * as userService from "../services/userService";
+import * as postService from "../services/postService";
 import { UserUpdateInput } from "../types/users";
-import { NotFoundError, ConflictError } from "../errors";
+import { NotFoundError, ConflictError, BadRequestError } from "../errors";
 import { UserJwtPayload } from "../types/express";
+import { PaginationParams } from "../types/common";
 
 // --- Get Current Logged-In User Profile (/me) ---
 export const getMe = async (
@@ -127,6 +129,58 @@ export const getUserProfile = async (
       res.status(404).json({ message: error.message });
     } else {
       res.status(500).json({ message: "Error retrieving user profile." });
+    }
+  }
+};
+
+/**
+ * Handles request to get posts for a specific user.
+ */
+export const handleGetUserPosts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const targetUserId = parseInt(req.params.userId, 10);
+    if (isNaN(targetUserId)) {
+      throw new BadRequestError("Invalid user ID.");
+    }
+
+    // Extract pagination from query, providing defaults
+    const limit = parseInt((req.query.limit as string) || "20", 10);
+    const offset = parseInt((req.query.offset as string) || "0", 10);
+    const pagination: PaginationParams = { limit, offset };
+
+    // Get current user ID if logged in (optional)
+    const currentUser = req.user as UserJwtPayload | undefined;
+    const currentUserId = currentUser?.userId;
+
+    // Call the service function
+    const posts = await postService.findPostsByUserId(
+      targetUserId,
+      pagination,
+      currentUserId,
+    );
+
+    res.status(200).json({
+      status: "success",
+      count: posts.length, // Optional: return count for this page
+      data: {
+        posts,
+      },
+    });
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      res.status(404).json({ status: "fail", message: error.message });
+    } else if (error instanceof BadRequestError) {
+      res.status(400).json({ status: "fail", message: error.message });
+    } else {
+      // Pass other errors to the global error handler or handle generically
+      console.error("Get User Posts Error:", error);
+      res
+        .status(500)
+        .json({ status: "error", message: "Failed to retrieve user posts." });
     }
   }
 };

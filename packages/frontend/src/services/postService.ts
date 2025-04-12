@@ -1,5 +1,5 @@
 import apiClient from "./apiClient";
-import { FeedPost, PostOutput } from "../types/posts"; // Use PostOutput or FeedPost if suitable
+import { FeedPost, PostOutput } from "../types/posts";
 
 // Define input for creating a post via API
 interface CreatePostData {
@@ -20,7 +20,7 @@ interface CreatePostResponse {
 interface GetPostResponse {
   status: string;
   data: {
-    post: PostOutput;
+    post: FeedPost;
   };
 }
 
@@ -48,7 +48,7 @@ export const createPost = async (
  * @returns Promise resolving with the PostOutput object.
  * @throws AxiosError on failure (e.g., post not found - 404).
  */
-export const getPostById = async (postId: number): Promise<PostOutput> => {
+export const getPostById = async (postId: number): Promise<FeedPost> => {
   const response = await apiClient.get<GetPostResponse>(
     `/api/v1/posts/${postId}`,
   );
@@ -68,15 +68,19 @@ export const likePost = async (postId: number): Promise<void> => {
 };
 
 /**
- * Unlikes a post by calling the backend API.
- * @param postId - The ID of the post to unlike.
- * @returns Promise resolving on success (usually 204 No Content).
+ * Dislikes a post or removes dislike by calling the backend API.
+ * Requires authentication (token handled by apiClient).
+ * @param postId - The ID of the post to dislike/undislike.
+ * @returns Promise resolving on success. Backend might return new vote status.
  * @throws AxiosError on API failure.
  */
-export const unlikePost = async (postId: number): Promise<void> => {
+export const dislikePost = async (postId: number): Promise<void> => {
+  // Or Promise<{ voteStatus: VoteStatus }> if backend returns it
   // Token is added automatically by apiClient interceptor
-  await apiClient.delete(`/api/v1/posts/${postId}/like`);
-  // No response body expected for 204
+  await apiClient.post(`/api/v1/posts/${postId}/dislike`);
+  // We might want the backend to return the new VoteStatus here
+  // const response = await apiClient.post<{ voteStatus: VoteStatus }>(`/api/v1/posts/${postId}/dislike`);
+  // return response.data;
 };
 
 // --- TODO: Add functions for getPost, updatePost, deletePost later ---

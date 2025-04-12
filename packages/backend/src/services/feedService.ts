@@ -4,6 +4,7 @@ import { FeedPostOutput } from "../types/posts"; // Import the feed post type
 import { PaginationParams } from "../types/common"; // Reuse pagination type for consistency
 import * as likeService from "./likeService";
 import * as commentService from "./commentService";
+import { VoteStatus } from "../types/likes";
 
 const POSTS_TABLE = "posts";
 const USERS_TABLE = "users";
@@ -42,16 +43,15 @@ export const getFeedForUser = async (
     .limit(limit)
     .offset(offset);
 
-  if (feedPostRecords.length === 0) {
-    return [];
-  }
+  if (feedPostRecords.length === 0) return [];
 
   const postIds = feedPostRecords.map((p) => p.id);
 
   // 3. Fetch like counts for these posts in one query
   const likeCountsResult = await db(LIKES_TABLE)
     .select("post_id")
-    .count("* as likeCount")
+    .count("* as count")
+    .where("vote_type", 1) // filtering for likes only
     .whereIn("post_id", postIds)
     .groupBy("post_id");
   const likeCountsMap = new Map<number, number>();
@@ -83,6 +83,16 @@ export const getFeedForUser = async (
     );
   });
 
+  // Fetch Current User's Vote Status (use requesting userId)
+  const userVotesResult = await db(LIKES_TABLE)
+    .select("post_id", "vote_type")
+    .where({ user_id: userId }) // Use requesting user's ID
+    .whereIn("post_id", postIds);
+  const userVotesMap = new Map<number, VoteStatus>();
+  userVotesResult.forEach((row: any) => {
+    userVotesMap.set(row.post_id, row.vote_type as VoteStatus);
+  });
+
   // 5. Combine data into FeedPostOutput structure
   const formattedFeed: FeedPostOutput[] = feedPostRecords.map((record) => ({
     id: record.id,
@@ -97,8 +107,8 @@ export const getFeedForUser = async (
       profilePicUrl: record.authorProfilePicUrl,
     },
     likeCount: likeCountsMap.get(record.id) || 0,
-    isLikedByCurrentUser: likedPostIdsSet.has(record.id),
     commentCount: commentCountsMap.get(record.id) || 0,
+    currentUserVote: userVotesMap.get(record.id) || 0,
   }));
 
   return formattedFeed;

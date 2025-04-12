@@ -1,3 +1,5 @@
+import { VoteStatus } from "./likes";
+
 // Represents the raw post record from the database
 export interface PostRecord {
   id: number;
@@ -16,8 +18,8 @@ export interface PostOutput {
   createdAt: Date;
   updatedAt: Date;
   likeCount: number;
-  isLikedByCurrentUser?: boolean; // true if liked by requester, undefined/false otherwise
   commentCount: number;
+  currentUserVote: VoteStatus | 0;
   // Add author info here if needed for single post view context?
   // author?: PublicUserProfile;
 }
@@ -49,6 +51,6 @@ export interface FeedPostOutput {
     profilePicUrl: string | null;
   };
   likeCount: number;
-  isLikedByCurrentUser?: boolean; // true if liked by requester, undefined/false otherwise
   commentCount: number;
+  currentUserVote: VoteStatus | 0;
 }

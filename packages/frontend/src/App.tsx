@@ -8,6 +8,7 @@ import ProfilePage from "./pages/ProfilePage";
 import FeedPage from "./pages/FeedPage";
 import CreatePostPage from "./pages/CreatePostPage";
 import PostDetailPage from "./pages/PostDetailPage";
+import PublicProfilePage from "./pages/PublicProfilePage";
 
 function App() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
@@ -107,8 +108,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/posts/:postId" element={<PostDetailPage />} />
-          {/* TODO: Add public profile route /users/:username later */}
-          {/* <Route path="/users/:username" element={<PublicProfilePage />} /> */}
+          <Route path="/users/:username" element={<PublicProfilePage />} />
           <Route
             path="/feed"
             element={

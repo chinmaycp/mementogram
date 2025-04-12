@@ -1,3 +1,5 @@
+import { VoteStatus } from "./likes";
+
 // Represents the raw post record from the database
 export interface PostRecord {
   id: number;
@@ -50,6 +52,6 @@ export interface FeedPost {
     profilePicUrl: string | null;
   };
   likeCount: number;
-  isLikedByCurrentUser: boolean;
   commentCount: number;
+  currentUserVote: VoteStatus;
 }

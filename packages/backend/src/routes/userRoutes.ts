@@ -1,6 +1,11 @@
 import express, { Router, Request, Response } from "express";
 import { protect, restrictTo } from "../middleware/authMiddleware";
-import { getMe, updateMe, getUserProfile } from "../controllers/userController";
+import {
+  getMe,
+  updateMe,
+  getUserProfile,
+  handleGetUserPosts,
+} from "../controllers/userController";
 import {
   handleFollowUser,
   handleUnfollowUser,
@@ -34,8 +39,10 @@ router.get("/:userId/following", handleGetFollowing);
 router.get("/:userId/followers", handleGetFollowers);
 
 // --- Get User Public Profile (GET /api/v1/users/:username) ---
-
 router.get("/:username", getUserProfile);
+
+// GET /api/v1/users/:userId/posts - Get posts created by a specific user
+router.get("/:userId(\\d+)/posts", handleGetUserPosts);
 
 // --- TODO: Admin routes for managing users (would use restrictTo) ---
 // GET /api/v1/users (Get all users - ADMIN only)
